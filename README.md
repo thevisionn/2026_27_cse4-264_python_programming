@@ -1,51 +1,49 @@
-# Case Study 9: Employee Payroll System
+# Case Study 10: Vigenere Cipher Encryption and Decryption Tool
 
-**Concepts used:** Object-oriented programming: classes, inheritance, polymorphism, method overriding
+**Concepts used:** Strings, ASCII/Unicode values (ord, chr), modulo arithmetic, loops
 
 ## 1. Problem Statement
 
-A company has Managers, Developers and Interns, each with a different salary structure. Create a payroll program that calculates gross salary, tax and net salary for each employee and prints the total payout. Tax is charged on a slab basis except for interns.
+Build a tool that encrypts and decrypts messages using the Vigenere cipher. A keyword decides how far each letter is shifted. Upper and lower case must be preserved and spaces, digits and symbols must stay unchanged.
 
 ## 2. Objectives
 
-1. Create a base class Employee and child classes Manager, Developer and Intern.
-2. Override methods to give different salary rules (polymorphism).
-3. Calculate tax using slabs.
-4. Print a payslip table and total payout.
+1. Convert letters to numbers and back using ord() and chr().
+2. Use modulo 26 to wrap around the alphabet.
+3. Repeat the key over the text, using key letters only for letters.
+4. Validate the mode and the key.
 
 ## 3. Assumptions
 
-- Manager gross = base + 20% allowance + 10000 bonus.
-- Developer gross = base + 10% allowance.
-- Intern gross = base (stipend) and pays no tax.
-- Tax slabs on gross: up to 30000 is 0%, up to 60000 is 10%, above 60000 is 20%.
+- The key contains only letters; its case does not matter.
+- Only English letters A-Z are shifted.
+- Non-letters are copied without using up a key letter.
 
 ## 4. Algorithm
 
-1. Read the number of employees.
-2. For each employee read the type (M, D or I), the name and the base salary; skip unknown types.
-3. Create an object of the matching class.
-4. For every object call gross_salary(), tax() and net_salary(); each class applies its own rules.
-5. Print one row per employee and add the net salary to the total.
-6. Print the total payout.
+1. Read the mode (E or D); stop if invalid.
+2. Read the key; stop if it is not alphabetic.
+3. Read the text.
+4. For each character: if it is a letter, find its alphabet position, get the shift from the next key letter, add the shift (encrypt) or subtract it (decrypt), apply modulo 26 and keep the original case.
+5. Move to the next key letter only after a letter.
+6. Copy any other character as it is; print the result.
 
 ## 5. Pseudocode
 
 ```text
-CLASS Employee: gross = base; tax by slab; net = gross - tax
-CLASS Manager EXTENDS Employee: gross = base*1.2 + 10000
-CLASS Developer EXTENDS Employee: gross = base*1.1
-CLASS Intern EXTENDS Employee: tax = 0
-
-READ n
-FOR each employee
-    READ type, name, base
-    IF type unknown THEN skip
-    CREATE object of matching class
-FOR each object
-    PRINT name, role, gross, tax, net
-    total += net
-PRINT total
+READ mode, key, text
+IF mode not E or D THEN error
+IF key not all letters THEN error
+k = 0; result = empty
+FOR each ch in text
+    IF ch is a letter THEN
+        base = 'A' if uppercase else 'a'
+        shift = position of key[k mod length of key]
+        IF encrypt THEN new = (ch - base + shift) mod 26
+        ELSE new = (ch - base - shift) mod 26
+        append new letter; k = k + 1
+    ELSE append ch
+PRINT result
 ```
 
 ## 6. Flowchart
@@ -54,96 +52,61 @@ PRINT total
 
 ```mermaid
 flowchart TD
-A(["Start"]) --> B["Read number of employees"]
-B --> C["Read type, name, base salary"]
-C --> D{"Type is M, D or I?"}
-D -->|No| E["Print skipped message"]
-D -->|Yes| F["Create matching object"]
-E --> G{"More employees?"}
-F --> G
-G -->|Yes| C
-G -->|No| H["For each object: gross, tax, net"]
-H --> I["Print payslip rows and total payout"]
-I --> J(["Stop"])
+A(["Start"]) --> B["Read mode"]
+B --> C{"Mode is E or D?"}
+C -->|No| X["Print invalid mode"]
+C -->|Yes| D["Read key"]
+D --> E{"Key all letters?"}
+E -->|No| Y["Print invalid key"]
+E -->|Yes| F["Read text"]
+F --> G["Take next character"]
+G --> H{"Is it a letter?"}
+H -->|Yes| I["Shift by key letter, use modulo 26"]
+I --> J["Move to next key letter"]
+H -->|No| K["Copy character unchanged"]
+J --> L{"More characters?"}
+K --> L
+L -->|Yes| G
+L -->|No| M["Print result"]
+X --> Z(["Stop"])
+Y --> Z
+M --> Z
 ```
 
 ## 7. Source Code
 
-File: [`payroll_system.py`](payroll_system.py)
+File: [`vigenere_cipher.py`](vigenere_cipher.py)
 
 ```python
-"""Case Study 9: Employee Payroll System (inheritance and polymorphism)."""
+"""Case Study 10: Vigenere Cipher Encryption and Decryption Tool."""
 
 
-class Employee:
-    def __init__(self, name, base):
-        self.name = name
-        self.base = base
-
-    def gross_salary(self):
-        return self.base
-
-    def tax(self):
-        """Tax slab on gross salary: up to 30000 -> 0%, up to 60000 -> 10%, above -> 20%."""
-        gross = self.gross_salary()
-        if gross <= 30000:
-            return 0
-        if gross <= 60000:
-            return gross * 0.10
-        return gross * 0.20
-
-    def net_salary(self):
-        return self.gross_salary() - self.tax()
-
-    def role(self):
-        return "Employee"
-
-
-class Manager(Employee):
-    def gross_salary(self):                       # base + 20% allowance + 10000 bonus
-        return self.base * 1.20 + 10000
-
-    def role(self):
-        return "Manager"
-
-
-class Developer(Employee):
-    def gross_salary(self):                       # base + 10% allowance
-        return self.base * 1.10
-
-    def role(self):
-        return "Developer"
-
-
-class Intern(Employee):
-    def tax(self):                                # interns pay no tax
-        return 0
-
-    def role(self):
-        return "Intern"
+def shift_text(text, key, direction):
+    """direction = +1 to encrypt, -1 to decrypt. Non-letters are kept as they are."""
+    result = ""
+    k = 0                                          # position in the key
+    for ch in text:
+        if ch.isalpha():
+            base = ord("A") if ch.isupper() else ord("a")
+            shift = ord(key[k % len(key)].lower()) - ord("a")
+            result += chr((ord(ch) - base + direction * shift) % 26 + base)
+            k += 1                                 # only letters use up key letters
+        else:
+            result += ch
+    return result
 
 
 def main():
-    kinds = {"M": Manager, "D": Developer, "I": Intern}
-    n = int(input("Number of employees: "))
-    staff = []
-    for _ in range(n):
-        kind = input("Type (M/D/I): ").strip().upper()
-        if kind not in kinds:
-            print("Unknown type, employee skipped.")
-            input("Name: "); input("Base salary: ")   # read and ignore
-            continue
-        name = input("Name: ")
-        base = float(input("Base salary: "))
-        staff.append(kinds[kind](name, base))
-
-    total = 0
-    print("\nName | Role | Gross | Tax | Net")
-    for e in staff:                                  # same call, different behaviour
-        print(e.name, "|", e.role(), "|", round(e.gross_salary(), 2), "|",
-              round(e.tax(), 2), "|", round(e.net_salary(), 2))
-        total += e.net_salary()
-    print("Total payout:", round(total, 2))
+    mode = input("Encrypt or Decrypt (E/D): ").strip().upper()
+    if mode not in ("E", "D"):
+        print("Invalid mode.")
+        return
+    key = input("Key (letters only): ").strip()
+    if not key.isalpha():
+        print("Invalid key. Use letters only.")
+        return
+    text = input("Text: ")
+    print("Result:", shift_text(text, key, 1 if mode == "E" else -1))
 
 
 main()
@@ -151,30 +114,27 @@ main()
 
 ## 8. Test Cases
 
-Run with `python payroll_system.py`. Type the input values one per line, in the order shown (⏎ means press Enter).
+Run with `python vigenere_cipher.py`. Type the input values one per line, in the order shown (⏎ means press Enter).
 
 | No. | Test description | Input (in order) | Expected output | Result |
 |---|---|---|---|---|
-| 1 | One of each type | `3 ⏎ M ⏎ Asha ⏎ 50000 ⏎ D ⏎ Ravi ⏎ 40000 ⏎ I ⏎ Kiran ⏎ 15000` | `Asha \| Manager \| 70000.0 \| 14000.0 \| 56000.0`<br>`Ravi \| Developer \| 44000.0 \| 4400.0 \| 39600.0`<br>`Kiran \| Intern \| 15000.0 \| 0 \| 15000.0`<br>`Total payout: 110600.0` | Pass |
-| 2 | Unknown employee type | `1 ⏎ X ⏎ Joe ⏎ 1000` | `Unknown type, employee skipped.` | Pass |
-| 3 | Gross below 30000 pays no tax | `1 ⏎ D ⏎ Ravi ⏎ 25000` | `Ravi \| Developer \| 27500.0 \| 0 \| 27500.0` | Pass |
-| 4 | Intern with high stipend pays no tax | `1 ⏎ I ⏎ Meena ⏎ 70000` | `Meena \| Intern \| 70000.0 \| 0 \| 70000.0` | Pass |
+| 1 | Encrypt HELLO with key KEY | `E ⏎ KEY ⏎ HELLO` | `Result: RIJVS` | Pass |
+| 2 | Decrypt RIJVS with key KEY | `D ⏎ KEY ⏎ RIJVS` | `Result: HELLO` | Pass |
+| 3 | Mixed case, spaces and symbol | `E ⏎ LEMON ⏎ Attack at Dawn!` | `Result: Lxfopv ef Rnhr!` | Pass |
+| 4 | Key contains a digit | `E ⏎ key1 ⏎ Hello` | `Invalid key. Use letters only.` | Pass |
+| 5 | Invalid mode | `X` | `Invalid mode.` | Pass |
+| 6 | Lower-case key gives same result | `E ⏎ key ⏎ HELLO` | `Result: RIJVS` | Pass |
 
 ## 9. Sample Output (take your screenshot of this run)
 
-Input typed: `3 ⏎ M ⏎ Asha ⏎ 50000 ⏎ D ⏎ Ravi ⏎ 40000 ⏎ I ⏎ Kiran ⏎ 15000`
+Input typed: `E ⏎ KEY ⏎ HELLO`
 
 ```text
-Number of employees: Type (M/D/I): Name: Base salary: Type (M/D/I): Name: Base salary: Type (M/D/I): Name: Base salary: 
-Name | Role | Gross | Tax | Net
-Asha | Manager | 70000.0 | 14000.0 | 56000.0
-Ravi | Developer | 44000.0 | 4400.0 | 39600.0
-Kiran | Intern | 15000.0 | 0 | 15000.0
-Total payout: 110600.0
+Encrypt or Decrypt (E/D): Key (letters only): Text: Result: RIJVS
 ```
 
 *Add your own screenshot here:* `![Output screenshot](screenshots/output1.png)`
 
 ## 10. Conclusion
 
-Inheritance avoided repeating code: the tax logic lives once in Employee, and each subclass overrides only what is different. The same loop works for all employee types thanks to polymorphism, and new roles can be added without changing the main program.
+The tool encrypts and decrypts correctly and decrypting an encrypted message always returns the original text. Using modulo 26 handles wrap-around from Z to A. It shows how simple mathematics can protect text, although the Vigenere cipher is not secure by modern standards.
