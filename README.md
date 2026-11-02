@@ -1,48 +1,51 @@
-# Case Study 8: Text Analyzer
+# Case Study 9: Employee Payroll System
 
-**Concepts used:** Strings, dictionaries, sets, sorting with keys, the string module
+**Concepts used:** Object-oriented programming: classes, inheritance, polymorphism, method overriding
 
 ## 1. Problem Statement
 
-Build a tool that reads a paragraph and reports statistics: number of words, unique words, sentences, vowels, the longest word, the 3 most frequent words and any palindrome words.
+A company has Managers, Developers and Interns, each with a different salary structure. Create a payroll program that calculates gross salary, tax and net salary for each employee and prints the total payout. Tax is charged on a slab basis except for interns.
 
 ## 2. Objectives
 
-1. Clean text by changing case and removing punctuation.
-2. Count word frequency using a dictionary.
-3. Sort items by more than one rule (count, then alphabet).
-4. Use string slicing to detect palindromes.
+1. Create a base class Employee and child classes Manager, Developer and Intern.
+2. Override methods to give different salary rules (polymorphism).
+3. Calculate tax using slabs.
+4. Print a payslip table and total payout.
 
 ## 3. Assumptions
 
-- The text is entered on a single line in English.
-- A sentence ends with ., ! or ?.
-- Palindromes must have more than 2 letters.
-- Words are separated by spaces.
+- Manager gross = base + 20% allowance + 10000 bonus.
+- Developer gross = base + 10% allowance.
+- Intern gross = base (stipend) and pays no tax.
+- Tax slabs on gross: up to 30000 is 0%, up to 60000 is 10%, above 60000 is 20%.
 
 ## 4. Algorithm
 
-1. Read the text.
-2. Convert to lower case, remove punctuation and split into words; stop if no words.
-3. Count sentences by counting . ! and ?
-4. Build a frequency dictionary of the words.
-5. Sort by count (highest first) and then alphabetically; take the top 3.
-6. Count vowels in the text.
-7. Find words longer than 2 letters that equal their reverse.
-8. Print all results.
+1. Read the number of employees.
+2. For each employee read the type (M, D or I), the name and the base salary; skip unknown types.
+3. Create an object of the matching class.
+4. For every object call gross_salary(), tax() and net_salary(); each class applies its own rules.
+5. Print one row per employee and add the net salary to the total.
+6. Print the total payout.
 
 ## 5. Pseudocode
 
 ```text
-READ text
-words = lowercase(text) without punctuation, split by spaces
-IF words empty THEN PRINT 'No words found', STOP
-sentences = count of '.', '!', '?'
-FOR each word: freq[word] += 1
-top3 = sort freq by (-count, word), first 3
-vowels = count of a,e,i,o,u in text
-palindromes = words with length > 2 and word = reverse(word)
-PRINT all results
+CLASS Employee: gross = base; tax by slab; net = gross - tax
+CLASS Manager EXTENDS Employee: gross = base*1.2 + 10000
+CLASS Developer EXTENDS Employee: gross = base*1.1
+CLASS Intern EXTENDS Employee: tax = 0
+
+READ n
+FOR each employee
+    READ type, name, base
+    IF type unknown THEN skip
+    CREATE object of matching class
+FOR each object
+    PRINT name, role, gross, tax, net
+    total += net
+PRINT total
 ```
 
 ## 6. Flowchart
@@ -51,58 +54,96 @@ PRINT all results
 
 ```mermaid
 flowchart TD
-A(["Start"]) --> B["Read text"]
-B --> C["Clean text, split into words"]
-C --> D{"Any words?"}
-D -->|No| E["Print no words found"]
-D -->|Yes| F["Count sentences and vowels"]
-F --> G["Build frequency dictionary"]
-G --> H["Sort and pick top 3"]
-H --> I["Find palindromes"]
-I --> J["Print all results"]
-E --> K(["Stop"])
-J --> K
+A(["Start"]) --> B["Read number of employees"]
+B --> C["Read type, name, base salary"]
+C --> D{"Type is M, D or I?"}
+D -->|No| E["Print skipped message"]
+D -->|Yes| F["Create matching object"]
+E --> G{"More employees?"}
+F --> G
+G -->|Yes| C
+G -->|No| H["For each object: gross, tax, net"]
+H --> I["Print payslip rows and total payout"]
+I --> J(["Stop"])
 ```
 
 ## 7. Source Code
 
-File: [`text_analyzer.py`](text_analyzer.py)
+File: [`payroll_system.py`](payroll_system.py)
 
 ```python
-"""Case Study 8: Text Analyzer (dictionaries, strings, sorting)."""
-import string
+"""Case Study 9: Employee Payroll System (inheritance and polymorphism)."""
 
 
-def clean_words(text):
-    """Lower-case the text, remove punctuation and split into words."""
-    table = str.maketrans("", "", string.punctuation)
-    return text.lower().translate(table).split()
+class Employee:
+    def __init__(self, name, base):
+        self.name = name
+        self.base = base
+
+    def gross_salary(self):
+        return self.base
+
+    def tax(self):
+        """Tax slab on gross salary: up to 30000 -> 0%, up to 60000 -> 10%, above -> 20%."""
+        gross = self.gross_salary()
+        if gross <= 30000:
+            return 0
+        if gross <= 60000:
+            return gross * 0.10
+        return gross * 0.20
+
+    def net_salary(self):
+        return self.gross_salary() - self.tax()
+
+    def role(self):
+        return "Employee"
+
+
+class Manager(Employee):
+    def gross_salary(self):                       # base + 20% allowance + 10000 bonus
+        return self.base * 1.20 + 10000
+
+    def role(self):
+        return "Manager"
+
+
+class Developer(Employee):
+    def gross_salary(self):                       # base + 10% allowance
+        return self.base * 1.10
+
+    def role(self):
+        return "Developer"
+
+
+class Intern(Employee):
+    def tax(self):                                # interns pay no tax
+        return 0
+
+    def role(self):
+        return "Intern"
 
 
 def main():
-    text = input("Enter text: ")
-    words = clean_words(text)
-    if not words:
-        print("No words found.")
-        return
+    kinds = {"M": Manager, "D": Developer, "I": Intern}
+    n = int(input("Number of employees: "))
+    staff = []
+    for _ in range(n):
+        kind = input("Type (M/D/I): ").strip().upper()
+        if kind not in kinds:
+            print("Unknown type, employee skipped.")
+            input("Name: "); input("Base salary: ")   # read and ignore
+            continue
+        name = input("Name: ")
+        base = float(input("Base salary: "))
+        staff.append(kinds[kind](name, base))
 
-    sentences = sum(text.count(p) for p in ".!?")
-    freq = {}
-    for w in words:
-        freq[w] = freq.get(w, 0) + 1
-
-    # sort by count (high first), then alphabetically
-    top = sorted(freq.items(), key=lambda item: (-item[1], item[0]))[:3]
-    vowels = sum(1 for ch in text.lower() if ch in "aeiou")
-    palindromes = sorted({w for w in words if len(w) > 2 and w == w[::-1]})
-
-    print("Total words:", len(words))
-    print("Unique words:", len(freq))
-    print("Sentences:", sentences)
-    print("Vowels:", vowels)
-    print("Longest word:", max(words, key=len))
-    print("Top 3 words:", top)
-    print("Palindromes:", palindromes if palindromes else "None")
+    total = 0
+    print("\nName | Role | Gross | Tax | Net")
+    for e in staff:                                  # same call, different behaviour
+        print(e.name, "|", e.role(), "|", round(e.gross_salary(), 2), "|",
+              round(e.tax(), 2), "|", round(e.net_salary(), 2))
+        total += e.net_salary()
+    print("Total payout:", round(total, 2))
 
 
 main()
@@ -110,31 +151,30 @@ main()
 
 ## 8. Test Cases
 
-Run with `python text_analyzer.py`. Type the input values one per line, in the order shown (⏎ means press Enter).
+Run with `python payroll_system.py`. Type the input values one per line, in the order shown (⏎ means press Enter).
 
 | No. | Test description | Input (in order) | Expected output | Result |
 |---|---|---|---|---|
-| 1 | Mixed sentence with palindromes | `Madam saw a level car. Wow, level up!` | `Total words: 8`<br>`Unique words: 7`<br>`Sentences: 2`<br>`Vowels: 11`<br>`Longest word: madam`<br>`Top 3 words: [('level', 2), ('a', 1), ('car', 1)]`<br>`Palindromes: ['level', 'madam', 'wow']` | Pass |
-| 2 | Only punctuation | `!!!` | `No words found.` | Pass |
-| 3 | Ties sorted alphabetically | `to be or not to be.` | `Top 3 words: [('be', 2), ('to', 2), ('not', 1)]`<br>`Palindromes: None` | Pass |
-| 4 | Single word | `hello` | `Total words: 1` | Pass |
+| 1 | One of each type | `3 ⏎ M ⏎ Asha ⏎ 50000 ⏎ D ⏎ Ravi ⏎ 40000 ⏎ I ⏎ Kiran ⏎ 15000` | `Asha \| Manager \| 70000.0 \| 14000.0 \| 56000.0`<br>`Ravi \| Developer \| 44000.0 \| 4400.0 \| 39600.0`<br>`Kiran \| Intern \| 15000.0 \| 0 \| 15000.0`<br>`Total payout: 110600.0` | Pass |
+| 2 | Unknown employee type | `1 ⏎ X ⏎ Joe ⏎ 1000` | `Unknown type, employee skipped.` | Pass |
+| 3 | Gross below 30000 pays no tax | `1 ⏎ D ⏎ Ravi ⏎ 25000` | `Ravi \| Developer \| 27500.0 \| 0 \| 27500.0` | Pass |
+| 4 | Intern with high stipend pays no tax | `1 ⏎ I ⏎ Meena ⏎ 70000` | `Meena \| Intern \| 70000.0 \| 0 \| 70000.0` | Pass |
 
 ## 9. Sample Output (take your screenshot of this run)
 
-Input typed: `Madam saw a level car. Wow, level up!`
+Input typed: `3 ⏎ M ⏎ Asha ⏎ 50000 ⏎ D ⏎ Ravi ⏎ 40000 ⏎ I ⏎ Kiran ⏎ 15000`
 
 ```text
-Enter text: Total words: 8
-Unique words: 7
-Sentences: 2
-Vowels: 11
-Longest word: madam
-Top 3 words: [('level', 2), ('a', 1), ('car', 1)]
-Palindromes: ['level', 'madam', 'wow']
+Number of employees: Type (M/D/I): Name: Base salary: Type (M/D/I): Name: Base salary: Type (M/D/I): Name: Base salary: 
+Name | Role | Gross | Tax | Net
+Asha | Manager | 70000.0 | 14000.0 | 56000.0
+Ravi | Developer | 44000.0 | 4400.0 | 39600.0
+Kiran | Intern | 15000.0 | 0 | 15000.0
+Total payout: 110600.0
 ```
 
 *Add your own screenshot here:* `![Output screenshot](screenshots/output1.png)`
 
 ## 10. Conclusion
 
-The analyzer gives accurate statistics for different texts. Dictionaries made word counting simple, and sorting with a tuple key handled ties neatly. It could be extended to read text from a file or ignore common words such as 'the'.
+Inheritance avoided repeating code: the tax logic lives once in Employee, and each subclass overrides only what is different. The same loop works for all employee types thanks to polymorphism, and new roles can be added without changing the main program.
