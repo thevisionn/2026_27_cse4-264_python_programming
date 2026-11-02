@@ -1,55 +1,53 @@
-# Case Study 4: Supermarket Billing and Inventory System
+# Case Study 5: Tic-Tac-Toe against an Unbeatable Computer (Minimax)
 
-**Concepts used:** Dictionaries, loops, string handling, conditional pricing
+**Concepts used:** Lists, functions, recursion, the Minimax algorithm
 
 ## 1. Problem Statement
 
-A supermarket needs a billing program that checks stock, lets a customer buy items by name and quantity, reduces the stock, and prints a bill. If the subtotal is above 1000 a 10% discount is given, and 5% GST is added on the amount after discount.
+Create a Tic-Tac-Toe game where a human (X) plays against the computer (O). The computer must choose its moves using the Minimax algorithm so that it never loses; the best the human can achieve is a draw.
 
 ## 2. Objectives
 
-1. Store item prices and stock in a dictionary.
-2. Validate item names and quantities against available stock.
-3. Update stock after every purchase.
-4. Calculate discount, GST and the final total correctly.
+1. Represent the board as a list and detect wins using winning lines.
+2. Use recursion to explore all possible future moves.
+3. Implement Minimax to score positions (+1 computer win, 0 draw, -1 human win).
+4. Validate the human's moves.
 
 ## 3. Assumptions
 
-- Prices are per unit in rupees.
-- Stock is fixed in the program at start.
-- Discount applies only when subtotal is strictly greater than 1000.
-- GST is charged on the discounted amount.
+- Human always plays first as X.
+- Positions are numbered 1 to 9, left to right, top to bottom.
+- If several moves have the same score, the first one is chosen.
 
 ## 4. Algorithm
 
-1. Display the available items.
-2. Read lines in the form 'item quantity' until the user types done.
-3. Reject wrong format, unknown items and quantities more than the stock.
-4. For valid lines reduce stock and add quantity to the cart.
-5. If the cart is empty print a message and stop.
-6. Subtotal = sum of price x quantity.
-7. If subtotal > 1000 then discount = 10% of subtotal.
-8. GST = 5% of (subtotal - discount); Total = subtotal - discount + GST.
-9. Print the bill.
+1. Start with an empty board of 9 cells.
+2. Show the board and read the human move; reject invalid or occupied cells.
+3. After each move check for a win or a full board.
+4. For the computer: try every empty cell, call minimax on the resulting board, and pick the cell with the highest score.
+5. minimax returns +1, -1 or 0 at the end of a game; otherwise it tries all moves for the current player and returns the max (computer turn) or the min (human turn).
+6. Repeat until someone wins or the board is full; print the result.
 
 ## 5. Pseudocode
 
 ```text
-inventory = {item: [price, stock]}
-cart = empty
-LOOP
-    READ line; IF line = done THEN BREAK
-    IF wrong format THEN message, CONTINUE
-    IF item not in inventory THEN message
-    ELSE IF qty <= 0 OR qty > stock THEN message
-    ELSE stock -= qty; cart[item] += qty
-END LOOP
-IF cart empty THEN PRINT message, STOP
-subtotal = SUM(price * qty)
-discount = 10% of subtotal IF subtotal > 1000 ELSE 0
-tax = 5% of (subtotal - discount)
-total = subtotal - discount + tax
-PRINT bill
+FUNCTION minimax(board, computerTurn)
+    IF O has won RETURN +1
+    IF X has won RETURN -1
+    IF board full RETURN 0
+    FOR each empty cell
+        place the current player's mark
+        score = minimax(board, NOT computerTurn)
+        remove the mark
+    IF computerTurn RETURN max(scores) ELSE RETURN min(scores)
+
+FUNCTION computerMove(board)
+    best = -2
+    FOR each empty cell: place O, score = minimax(board, false), undo
+        IF score > best THEN best = score, move = cell
+    RETURN move
+
+MAIN: LOOP human move, check end, computerMove, check end; PRINT result
 ```
 
 ## 6. Flowchart
@@ -58,84 +56,99 @@ PRINT bill
 
 ```mermaid
 flowchart TD
-A(["Start"]) --> B["Read item and quantity"]
-B --> C{"Input is done?"}
-C -->|No| D{"Valid item and stock OK?"}
-D -->|No| E["Print error"]
+A(["Start"]) --> B["Show board"]
+B --> C["Read human move"]
+C --> D{"Valid and empty?"}
+D -->|No| E["Print invalid move"]
 E --> B
-D -->|Yes| F["Reduce stock, add to cart"]
-F --> B
-C -->|Yes| G{"Cart empty?"}
-G -->|Yes| H["Print no items purchased"]
-G -->|No| I["Compute subtotal"]
-I --> J{"Subtotal > 1000?"}
-J -->|Yes| K["Discount = 10 percent"]
-J -->|No| L["Discount = 0"]
-K --> M["Add 5 percent GST, find total"]
-L --> M
-M --> N["Print bill"]
-H --> O(["Stop"])
-N --> O
+D -->|Yes| F["Place X"]
+F --> G{"Win or board full?"}
+G -->|Yes| L["Show board, print result"]
+G -->|No| H["Computer tries every move using minimax"]
+H --> I["Place O at best move"]
+I --> J{"Win or board full?"}
+J -->|Yes| L
+J -->|No| B
+L --> M(["Stop"])
 ```
 
 ## 7. Source Code
 
-File: [`billing_system.py`](billing_system.py)
+File: [`tictactoe_ai.py`](tictactoe_ai.py)
 
 ```python
-"""Case Study 4: Supermarket Billing and Inventory System."""
+"""Case Study 5: Tic-Tac-Toe against an unbeatable computer (Minimax algorithm)."""
 
-# item: [price per unit, stock available]
-inventory = {
-    "rice": [60, 20],
-    "sugar": [45, 10],
-    "oil": [150, 5],
-    "tea": [250, 8],
-}
-GST_RATE = 0.05          # 5% tax
-DISCOUNT_LIMIT = 1000    # discount applies above this subtotal
-DISCOUNT_RATE = 0.10     # 10% discount
+WIN_LINES = [(0, 1, 2), (3, 4, 5), (6, 7, 8),     # rows
+             (0, 3, 6), (1, 4, 7), (2, 5, 8),     # columns
+             (0, 4, 8), (2, 4, 6)]                # diagonals
+
+
+def show(board):
+    for i in range(0, 9, 3):
+        print(" | ".join(board[i:i + 3]))
+        if i < 6:
+            print("--+---+--")
+
+
+def winner(board):
+    """Return 'X' or 'O' if someone has won, else None."""
+    for a, b, c in WIN_LINES:
+        if board[a] == board[b] == board[c] != " ":
+            return board[a]
+    return None
+
+
+def minimax(board, is_computer):
+    """Score a position: +1 computer wins, -1 human wins, 0 draw."""
+    w = winner(board)
+    if w == "O":
+        return 1
+    if w == "X":
+        return -1
+    if " " not in board:
+        return 0
+    scores = []
+    for i in range(9):
+        if board[i] == " ":
+            board[i] = "O" if is_computer else "X"   # try the move
+            scores.append(minimax(board, not is_computer))
+            board[i] = " "                           # undo the move
+    return max(scores) if is_computer else min(scores)
+
+
+def computer_move(board):
+    """Pick the move with the best minimax score (first one wins ties)."""
+    best_score, best_move = -2, None
+    for i in range(9):
+        if board[i] == " ":
+            board[i] = "O"
+            score = minimax(board, False)
+            board[i] = " "
+            if score > best_score:
+                best_score, best_move = score, i
+    return best_move
 
 
 def main():
-    cart = {}
-    print("Items:", ", ".join(inventory))
-    print("Enter 'item quantity' (or 'done' to finish)")
+    board = [" "] * 9
+    print("You are X, computer is O. Positions are 1-9 (left to right, top to bottom).")
     while True:
-        line = input("> ").strip().lower()
-        if line == "done":
-            break
-        parts = line.split()
-        if len(parts) != 2 or not parts[1].isdigit():
-            print("Format: item quantity")
+        show(board)
+        pos = input("Your move (1-9): ").strip()
+        if not pos.isdigit() or not 1 <= int(pos) <= 9 or board[int(pos) - 1] != " ":
+            print("Invalid move, try again.")
             continue
-        item, qty = parts[0], int(parts[1])
-        if item not in inventory:
-            print("Item not available.")
-        elif qty <= 0 or qty > inventory[item][1]:
-            print("Only", inventory[item][1], "in stock.")
-        else:
-            inventory[item][1] -= qty                  # reduce stock
-            cart[item] = cart.get(item, 0) + qty
-            print("Added", qty, item)
-
-    if not cart:
-        print("No items purchased.")
-        return
-
-    print("\n----- BILL -----")
-    subtotal = 0
-    for item, qty in cart.items():
-        cost = inventory[item][0] * qty
-        subtotal += cost
-        print(item, qty, "x", inventory[item][0], "=", cost)
-    discount = subtotal * DISCOUNT_RATE if subtotal > DISCOUNT_LIMIT else 0
-    tax = (subtotal - discount) * GST_RATE
-    total = subtotal - discount + tax
-    print("Subtotal:", round(subtotal, 2))
-    print("Discount:", round(discount, 2))
-    print("GST 5%:", round(tax, 2))
-    print("TOTAL:", round(total, 2))
+        board[int(pos) - 1] = "X"
+        if winner(board) or " " not in board:
+            break
+        board[computer_move(board)] = "O"
+        print("Computer played.")
+        if winner(board) or " " not in board:
+            break
+    show(board)
+    w = winner(board)
+    print("You win!" if w == "X" else "Computer wins!" if w == "O" else "It's a draw!")
 
 
 main()
@@ -143,39 +156,50 @@ main()
 
 ## 8. Test Cases
 
-Run with `python billing_system.py`. Type the input values one per line, in the order shown (⏎ means press Enter).
+Run with `python tictactoe_ai.py`. Type the input values one per line, in the order shown (⏎ means press Enter).
 
 | No. | Test description | Input (in order) | Expected output | Result |
 |---|---|---|---|---|
-| 1 | Small purchase, no discount | `rice 2 ⏎ sugar 1 ⏎ done` | `Subtotal: 165`<br>`GST 5%: 8.25`<br>`TOTAL: 173.25` | Pass |
-| 2 | Subtotal exactly 1000 (no discount) | `tea 4 ⏎ done` | `TOTAL: 1050.0` | Pass |
-| 3 | Subtotal above 1000 (discount applies) | `tea 5 ⏎ done` | `Discount: 125.0`<br>`TOTAL: 1181.25` | Pass |
-| 4 | Quantity more than stock | `oil 6 ⏎ done` | `Only 5 in stock.` | Pass |
-| 5 | Item not in inventory | `milk 1 ⏎ done` | `Item not available.` | Pass |
-| 6 | Wrong input format | `rice ⏎ done` | `Format: item quantity` | Pass |
-| 7 | Nothing bought | `done` | `No items purchased.` | Pass |
+| 1 | Human plays badly (1, 2, 4) | `1 ⏎ 2 ⏎ 4` | `Computer wins!` | Pass |
+| 2 | Human plays well (1, 2, 7, 6, 9) | `1 ⏎ 2 ⏎ 7 ⏎ 6 ⏎ 9` | `It's a draw!` | Pass |
+| 3 | Invalid cell number 0, then a repeated cell | `0 ⏎ 1 ⏎ 1 ⏎ 2 ⏎ 7 ⏎ 6 ⏎ 9` | `Invalid move, try again.` | Pass |
+| 4 | Non-numeric input | `abc ⏎ 1 ⏎ 2 ⏎ 7 ⏎ 6 ⏎ 9` | `Invalid move, try again.` | Pass |
+| 5 | Computer reply shown after human move | `1 ⏎ 2 ⏎ 4` | `Computer played.` | Pass |
 
 ## 9. Sample Output (take your screenshot of this run)
 
-Input typed: `rice 2 ⏎ sugar 1 ⏎ done`
+Input typed: `1 ⏎ 2 ⏎ 4`
 
 ```text
-Items: rice, sugar, oil, tea
-Enter 'item quantity' (or 'done' to finish)
-> Added 2 rice
-> Added 1 sugar
-> 
------ BILL -----
-rice 2 x 60 = 120
-sugar 1 x 45 = 45
-Subtotal: 165
-Discount: 0
-GST 5%: 8.25
-TOTAL: 173.25
+You are X, computer is O. Positions are 1-9 (left to right, top to bottom).
+  |   |  
+--+---+--
+  |   |  
+--+---+--
+  |   |  
+Your move (1-9): Computer played.
+X |   |  
+--+---+--
+  | O |  
+--+---+--
+  |   |  
+Your move (1-9): Computer played.
+X | X | O
+--+---+--
+  | O |  
+--+---+--
+  |   |  
+Your move (1-9): Computer played.
+X | X | O
+--+---+--
+X | O |  
+--+---+--
+O |   |  
+Computer wins!
 ```
 
 *Add your own screenshot here:* `![Output screenshot](screenshots/output1.png)`
 
 ## 10. Conclusion
 
-The billing system gives correct totals for all price ranges, protects stock levels and rejects wrong input. Keeping rates as named constants (GST_RATE, DISCOUNT_RATE) makes the rules easy to change. A future version could load stock from a file.
+Minimax lets the computer evaluate every possible continuation, so it never loses. Tests show a careless human loses and a careful one can only draw. The program is a good example of recursion with backtracking (place a mark, explore, undo it).
