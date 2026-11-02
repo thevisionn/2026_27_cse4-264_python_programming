@@ -1,49 +1,49 @@
-# Case Study 6: Sudoku Solver using Backtracking
+# Case Study 7: Maze Solver using Breadth-First Search
 
-**Concepts used:** 2D lists, nested loops, recursion, backtracking
+**Concepts used:** 2D lists, queues (deque), dictionaries, BFS, path reconstruction
 
 ## 1. Problem Statement
 
-Write a program that solves any valid 9x9 Sudoku puzzle. Empty cells are entered as 0. The program must also detect puzzles that already break the rules and puzzles that have no solution.
+Given a maze drawn with characters ('S' start, 'E' end, '#' wall, '.' open path), find the shortest path from S to E and display it with '*' marks. If no path exists, print a message.
 
 ## 2. Objectives
 
-1. Represent the board as a 2D list.
-2. Check whether a number can be placed (row, column, 3x3 box).
-3. Solve the puzzle using recursion and backtracking.
-4. Report invalid and unsolvable puzzles.
+1. Read a grid from the user and locate S and E.
+2. Use a queue to implement Breadth-First Search.
+3. Rebuild the path using a came_from dictionary.
+4. Handle mazes with no solution.
 
 ## 3. Assumptions
 
-- Input is 9 rows of 9 digits; 0 means empty.
-- Typing 'sample' loads a built-in puzzle.
-- Only one solution needs to be found.
+- Movement is up, down, left or right only (no diagonals).
+- The maze is rectangular and has at most one S and one E.
+- Each move costs one step.
 
 ## 4. Algorithm
 
-1. Read the 9 rows and convert to a 9x9 grid of numbers.
-2. If the starting grid already breaks the rules, print an invalid-puzzle message.
-3. Find the first empty cell. If none exists the puzzle is solved.
-4. Try numbers 1 to 9; if a number is valid, place it and solve the rest recursively.
-5. If the recursive call fails, reset the cell to 0 (backtrack) and try the next number.
-6. If no number fits, return False. Print the grid if solved, else 'No solution exists.'
+1. Read the number of rows and the maze rows.
+2. Find the positions of S and E; if either is missing, there is no path.
+3. Put S in a queue and record came_from[S] = None.
+4. Remove a cell from the queue; if it is E, rebuild the path backwards using came_from.
+5. Otherwise visit its 4 neighbours that are inside the grid, are not walls and are not yet visited; record where they came from and add them to the queue.
+6. If the queue becomes empty, no path exists.
+7. Mark the path with * and print the length and the maze.
 
 ## 5. Pseudocode
 
 ```text
-FUNCTION solve(grid)
-    FIND first empty cell (row, col)
-    IF none found RETURN true
-    FOR num = 1 TO 9
-        IF isValid(grid, row, col, num) THEN
-            grid[row][col] = num
-            IF solve(grid) THEN RETURN true
-            grid[row][col] = 0        // backtrack
-    RETURN false
-
-FUNCTION isValid(grid, row, col, num)
-    RETURN false if num is in the row, the column or the 3x3 box
-    RETURN true
+FIND start, end
+queue = [start]; cameFrom[start] = none
+WHILE queue not empty
+    cell = remove first from queue
+    IF cell = end THEN
+        walk back using cameFrom to build path
+        RETURN reversed path
+    FOR each neighbour (up, down, left, right)
+        IF inside grid AND not wall AND not visited THEN
+            cameFrom[neighbour] = cell
+            ADD neighbour to queue
+RETURN no path
 ```
 
 ## 6. Flowchart
@@ -52,95 +52,76 @@ FUNCTION isValid(grid, row, col, num)
 
 ```mermaid
 flowchart TD
-A(["Start"]) --> B["Read 9 rows into grid"]
-B --> C{"Starting grid breaks rules?"}
-C -->|Yes| D["Print invalid puzzle"]
-C -->|No| E["solve grid"]
-E --> F{"Empty cell found?"}
-F -->|No| G["Solved - print grid"]
-F -->|Yes| H["Try number 1 to 9"]
-H --> I{"Number valid here?"}
-I -->|Yes| J["Place number, solve rest"]
-J --> K{"Rest solved?"}
-K -->|Yes| G
-K -->|No| L["Reset cell to 0 - backtrack"]
-L --> H
-I -->|No| M{"More numbers?"}
-M -->|Yes| H
-M -->|No| N["Print no solution"]
-D --> O(["Stop"])
-G --> O
-N --> O
+A(["Start"]) --> B["Read maze, find S and E"]
+B --> C{"S and E found?"}
+C -->|No| N["Print no path found"]
+C -->|Yes| D["Add S to queue"]
+D --> E{"Queue empty?"}
+E -->|Yes| N
+E -->|No| F["Remove first cell"]
+F --> G{"Cell is E?"}
+G -->|Yes| H["Rebuild path using came_from"]
+H --> I["Mark path, print length and maze"]
+G -->|No| J["Add valid unvisited neighbours"]
+J --> E
+N --> O(["Stop"])
+I --> O
 ```
 
 ## 7. Source Code
 
-File: [`sudoku_solver.py`](sudoku_solver.py)
+File: [`maze_solver.py`](maze_solver.py)
 
 ```python
-"""Case Study 6: Sudoku Solver using backtracking."""
-
-SAMPLE = [
-    "530070000", "600195000", "098000060",
-    "800060003", "400803001", "700020006",
-    "060000280", "000419005", "000080079",
-]
+"""Case Study 7: Maze Solver using Breadth-First Search (shortest path)."""
+from collections import deque
 
 
-def is_valid(grid, row, col, num):
-    """Check that num is not already in the row, column or 3x3 box."""
-    for i in range(9):
-        if grid[row][i] == num or grid[i][col] == num:
-            return False
-    box_r, box_c = 3 * (row // 3), 3 * (col // 3)
-    for r in range(box_r, box_r + 3):
-        for c in range(box_c, box_c + 3):
-            if grid[r][c] == num:
-                return False
-    return True
+def find(maze, symbol):
+    """Return (row, col) of a symbol in the maze."""
+    for r, row in enumerate(maze):
+        if symbol in row:
+            return r, row.index(symbol)
+    return None
 
 
-def solve(grid):
-    """Fill empty cells (0) one by one; undo (backtrack) when stuck."""
-    for row in range(9):
-        for col in range(9):
-            if grid[row][col] == 0:
-                for num in range(1, 10):
-                    if is_valid(grid, row, col, num):
-                        grid[row][col] = num
-                        if solve(grid):
-                            return True
-                        grid[row][col] = 0     # backtrack
-                return False                   # no number fits here
-    return True                                # no empty cell left
-
-
-def has_conflict(grid):
-    """Detect a starting puzzle that already breaks the rules."""
-    for r in range(9):
-        for c in range(9):
-            n = grid[r][c]
-            if n != 0:
-                grid[r][c] = 0
-                ok = is_valid(grid, r, c, n)
-                grid[r][c] = n
-                if not ok:
-                    return True
-    return False
+def solve_maze(maze):
+    """Return the shortest path from S to E as a list of cells, or None."""
+    start, end = find(maze, "S"), find(maze, "E")
+    if start is None or end is None:
+        return None
+    queue = deque([start])
+    came_from = {start: None}              # remembers how we reached each cell
+    while queue:
+        r, c = queue.popleft()
+        if (r, c) == end:
+            path = []
+            cell = end
+            while cell is not None:            # walk backwards to the start
+                path.append(cell)
+                cell = came_from[cell]
+            return path[::-1]
+        for dr, dc in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            nr, nc = r + dr, c + dc
+            inside = 0 <= nr < len(maze) and 0 <= nc < len(maze[0])
+            if inside and maze[nr][nc] != "#" and (nr, nc) not in came_from:
+                came_from[(nr, nc)] = (r, c)
+                queue.append((nr, nc))
+    return None
 
 
 def main():
-    choice = input("Type 'sample' for built-in puzzle, or press Enter to type 9 rows: ")
-    rows = SAMPLE if choice.strip() == "sample" else [input("Row: ").strip() for _ in range(9)]
-    grid = [[int(ch) for ch in row] for row in rows]
-    if has_conflict(grid):
-        print("Invalid puzzle: it already breaks Sudoku rules.")
-    elif solve(grid):
-        print("Solved:")
-        for row in grid:
-            print(" ".join(str(n) for n in row))
-    else:
-        print("No solution exists.")
+    n = int(input("Number of rows: "))
+    maze = [list(input().strip()) for _ in range(n)]
+    path = solve_maze(maze)
+    if path is None:
+        print("No path found.")
+        return
+    for r, c in path[1:-1]:                # mark the path with *
+        maze[r][c] = "*"
+    print("Shortest path length:", len(path) - 1, "steps")
+    for row in maze:
+        print("".join(row))
 
 
 main()
@@ -148,34 +129,29 @@ main()
 
 ## 8. Test Cases
 
-Run with `python sudoku_solver.py`. Type the input values one per line, in the order shown (⏎ means press Enter).
+Run with `python maze_solver.py`. Type the input values one per line, in the order shown (⏎ means press Enter).
 
 | No. | Test description | Input (in order) | Expected output | Result |
 |---|---|---|---|---|
-| 1 | Built-in sample puzzle | `sample` | `Solved:`<br>`5 3 4 6 7 8 9 1 2`<br>`3 4 5 2 8 6 1 7 9` | Pass |
-| 2 | Two 5s in the first row | ` ⏎ 550070000 ⏎ 000000000 ⏎ 000000000 ⏎ 000000000 ⏎ 000000000 ⏎ 000000000 ⏎ 000000000 ⏎ 000000000 ⏎ 000000000` | `Invalid puzzle: it already breaks Sudoku rules.` | Pass |
-| 3 | Puzzle with no solution | ` ⏎ 123456780 ⏎ 000000009 ⏎ 000000000 ⏎ 000000000 ⏎ 000000000 ⏎ 000000000 ⏎ 000000000 ⏎ 000000000 ⏎ 000000000` | `No solution exists.` | Pass |
-| 4 | Already solved grid | ` ⏎ 534678912 ⏎ 672195348 ⏎ 198342567 ⏎ 859761423 ⏎ 426853791 ⏎ 713924856 ⏎ 961537284 ⏎ 287419635 ⏎ 345286179` | `Solved:`<br>`5 3 4 6 7 8 9 1 2` | Pass |
+| 1 | 3x3 maze with one wall | `3 ⏎ S.. ⏎ .#. ⏎ ..E` | `Shortest path length: 4 steps` | Pass |
+| 2 | Wall blocks the way | `1 ⏎ S#E` | `No path found.` | Pass |
+| 3 | S next to E | `1 ⏎ SE` | `Shortest path length: 1 steps` | Pass |
+| 4 | No end point in maze | `1 ⏎ S..` | `No path found.` | Pass |
+| 5 | Longer maze with a detour | `4 ⏎ S.#. ⏎ .##. ⏎ .... ⏎ #.#E` | `Shortest path length: 6 steps` | Pass |
 
 ## 9. Sample Output (take your screenshot of this run)
 
-Input typed: `sample`
+Input typed: `3 ⏎ S.. ⏎ .#. ⏎ ..E`
 
 ```text
-Type 'sample' for built-in puzzle, or press Enter to type 9 rows: Solved:
-5 3 4 6 7 8 9 1 2
-6 7 2 1 9 5 3 4 8
-1 9 8 3 4 2 5 6 7
-8 5 9 7 6 1 4 2 3
-4 2 6 8 5 3 7 9 1
-7 1 3 9 2 4 8 5 6
-9 6 1 5 3 7 2 8 4
-2 8 7 4 1 9 6 3 5
-3 4 5 2 8 6 1 7 9
+Number of rows: Shortest path length: 4 steps
+S..
+*#.
+**E
 ```
 
 *Add your own screenshot here:* `![Output screenshot](screenshots/output1.png)`
 
 ## 10. Conclusion
 
-Backtracking solves the standard puzzle quickly by trying a number, going deeper, and undoing the choice when stuck. Checking for conflicts first prevents wasted work on impossible puzzles. The same technique is used for N-Queens and other constraint problems.
+BFS explores cells level by level, so the first time it reaches E it has found a shortest path. The came_from dictionary allows the path to be rebuilt without storing full paths in the queue. The same idea is used in GPS navigation and game AI.
