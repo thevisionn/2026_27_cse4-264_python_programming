@@ -1,53 +1,49 @@
-# Case Study 5: Tic-Tac-Toe against an Unbeatable Computer (Minimax)
+# Case Study 6: Sudoku Solver using Backtracking
 
-**Concepts used:** Lists, functions, recursion, the Minimax algorithm
+**Concepts used:** 2D lists, nested loops, recursion, backtracking
 
 ## 1. Problem Statement
 
-Create a Tic-Tac-Toe game where a human (X) plays against the computer (O). The computer must choose its moves using the Minimax algorithm so that it never loses; the best the human can achieve is a draw.
+Write a program that solves any valid 9x9 Sudoku puzzle. Empty cells are entered as 0. The program must also detect puzzles that already break the rules and puzzles that have no solution.
 
 ## 2. Objectives
 
-1. Represent the board as a list and detect wins using winning lines.
-2. Use recursion to explore all possible future moves.
-3. Implement Minimax to score positions (+1 computer win, 0 draw, -1 human win).
-4. Validate the human's moves.
+1. Represent the board as a 2D list.
+2. Check whether a number can be placed (row, column, 3x3 box).
+3. Solve the puzzle using recursion and backtracking.
+4. Report invalid and unsolvable puzzles.
 
 ## 3. Assumptions
 
-- Human always plays first as X.
-- Positions are numbered 1 to 9, left to right, top to bottom.
-- If several moves have the same score, the first one is chosen.
+- Input is 9 rows of 9 digits; 0 means empty.
+- Typing 'sample' loads a built-in puzzle.
+- Only one solution needs to be found.
 
 ## 4. Algorithm
 
-1. Start with an empty board of 9 cells.
-2. Show the board and read the human move; reject invalid or occupied cells.
-3. After each move check for a win or a full board.
-4. For the computer: try every empty cell, call minimax on the resulting board, and pick the cell with the highest score.
-5. minimax returns +1, -1 or 0 at the end of a game; otherwise it tries all moves for the current player and returns the max (computer turn) or the min (human turn).
-6. Repeat until someone wins or the board is full; print the result.
+1. Read the 9 rows and convert to a 9x9 grid of numbers.
+2. If the starting grid already breaks the rules, print an invalid-puzzle message.
+3. Find the first empty cell. If none exists the puzzle is solved.
+4. Try numbers 1 to 9; if a number is valid, place it and solve the rest recursively.
+5. If the recursive call fails, reset the cell to 0 (backtrack) and try the next number.
+6. If no number fits, return False. Print the grid if solved, else 'No solution exists.'
 
 ## 5. Pseudocode
 
 ```text
-FUNCTION minimax(board, computerTurn)
-    IF O has won RETURN +1
-    IF X has won RETURN -1
-    IF board full RETURN 0
-    FOR each empty cell
-        place the current player's mark
-        score = minimax(board, NOT computerTurn)
-        remove the mark
-    IF computerTurn RETURN max(scores) ELSE RETURN min(scores)
+FUNCTION solve(grid)
+    FIND first empty cell (row, col)
+    IF none found RETURN true
+    FOR num = 1 TO 9
+        IF isValid(grid, row, col, num) THEN
+            grid[row][col] = num
+            IF solve(grid) THEN RETURN true
+            grid[row][col] = 0        // backtrack
+    RETURN false
 
-FUNCTION computerMove(board)
-    best = -2
-    FOR each empty cell: place O, score = minimax(board, false), undo
-        IF score > best THEN best = score, move = cell
-    RETURN move
-
-MAIN: LOOP human move, check end, computerMove, check end; PRINT result
+FUNCTION isValid(grid, row, col, num)
+    RETURN false if num is in the row, the column or the 3x3 box
+    RETURN true
 ```
 
 ## 6. Flowchart
@@ -56,99 +52,95 @@ MAIN: LOOP human move, check end, computerMove, check end; PRINT result
 
 ```mermaid
 flowchart TD
-A(["Start"]) --> B["Show board"]
-B --> C["Read human move"]
-C --> D{"Valid and empty?"}
-D -->|No| E["Print invalid move"]
-E --> B
-D -->|Yes| F["Place X"]
-F --> G{"Win or board full?"}
-G -->|Yes| L["Show board, print result"]
-G -->|No| H["Computer tries every move using minimax"]
-H --> I["Place O at best move"]
-I --> J{"Win or board full?"}
-J -->|Yes| L
-J -->|No| B
-L --> M(["Stop"])
+A(["Start"]) --> B["Read 9 rows into grid"]
+B --> C{"Starting grid breaks rules?"}
+C -->|Yes| D["Print invalid puzzle"]
+C -->|No| E["solve grid"]
+E --> F{"Empty cell found?"}
+F -->|No| G["Solved - print grid"]
+F -->|Yes| H["Try number 1 to 9"]
+H --> I{"Number valid here?"}
+I -->|Yes| J["Place number, solve rest"]
+J --> K{"Rest solved?"}
+K -->|Yes| G
+K -->|No| L["Reset cell to 0 - backtrack"]
+L --> H
+I -->|No| M{"More numbers?"}
+M -->|Yes| H
+M -->|No| N["Print no solution"]
+D --> O(["Stop"])
+G --> O
+N --> O
 ```
 
 ## 7. Source Code
 
-File: [`tictactoe_ai.py`](tictactoe_ai.py)
+File: [`sudoku_solver.py`](sudoku_solver.py)
 
 ```python
-"""Case Study 5: Tic-Tac-Toe against an unbeatable computer (Minimax algorithm)."""
+"""Case Study 6: Sudoku Solver using backtracking."""
 
-WIN_LINES = [(0, 1, 2), (3, 4, 5), (6, 7, 8),     # rows
-             (0, 3, 6), (1, 4, 7), (2, 5, 8),     # columns
-             (0, 4, 8), (2, 4, 6)]                # diagonals
-
-
-def show(board):
-    for i in range(0, 9, 3):
-        print(" | ".join(board[i:i + 3]))
-        if i < 6:
-            print("--+---+--")
+SAMPLE = [
+    "530070000", "600195000", "098000060",
+    "800060003", "400803001", "700020006",
+    "060000280", "000419005", "000080079",
+]
 
 
-def winner(board):
-    """Return 'X' or 'O' if someone has won, else None."""
-    for a, b, c in WIN_LINES:
-        if board[a] == board[b] == board[c] != " ":
-            return board[a]
-    return None
-
-
-def minimax(board, is_computer):
-    """Score a position: +1 computer wins, -1 human wins, 0 draw."""
-    w = winner(board)
-    if w == "O":
-        return 1
-    if w == "X":
-        return -1
-    if " " not in board:
-        return 0
-    scores = []
+def is_valid(grid, row, col, num):
+    """Check that num is not already in the row, column or 3x3 box."""
     for i in range(9):
-        if board[i] == " ":
-            board[i] = "O" if is_computer else "X"   # try the move
-            scores.append(minimax(board, not is_computer))
-            board[i] = " "                           # undo the move
-    return max(scores) if is_computer else min(scores)
+        if grid[row][i] == num or grid[i][col] == num:
+            return False
+    box_r, box_c = 3 * (row // 3), 3 * (col // 3)
+    for r in range(box_r, box_r + 3):
+        for c in range(box_c, box_c + 3):
+            if grid[r][c] == num:
+                return False
+    return True
 
 
-def computer_move(board):
-    """Pick the move with the best minimax score (first one wins ties)."""
-    best_score, best_move = -2, None
-    for i in range(9):
-        if board[i] == " ":
-            board[i] = "O"
-            score = minimax(board, False)
-            board[i] = " "
-            if score > best_score:
-                best_score, best_move = score, i
-    return best_move
+def solve(grid):
+    """Fill empty cells (0) one by one; undo (backtrack) when stuck."""
+    for row in range(9):
+        for col in range(9):
+            if grid[row][col] == 0:
+                for num in range(1, 10):
+                    if is_valid(grid, row, col, num):
+                        grid[row][col] = num
+                        if solve(grid):
+                            return True
+                        grid[row][col] = 0     # backtrack
+                return False                   # no number fits here
+    return True                                # no empty cell left
+
+
+def has_conflict(grid):
+    """Detect a starting puzzle that already breaks the rules."""
+    for r in range(9):
+        for c in range(9):
+            n = grid[r][c]
+            if n != 0:
+                grid[r][c] = 0
+                ok = is_valid(grid, r, c, n)
+                grid[r][c] = n
+                if not ok:
+                    return True
+    return False
 
 
 def main():
-    board = [" "] * 9
-    print("You are X, computer is O. Positions are 1-9 (left to right, top to bottom).")
-    while True:
-        show(board)
-        pos = input("Your move (1-9): ").strip()
-        if not pos.isdigit() or not 1 <= int(pos) <= 9 or board[int(pos) - 1] != " ":
-            print("Invalid move, try again.")
-            continue
-        board[int(pos) - 1] = "X"
-        if winner(board) or " " not in board:
-            break
-        board[computer_move(board)] = "O"
-        print("Computer played.")
-        if winner(board) or " " not in board:
-            break
-    show(board)
-    w = winner(board)
-    print("You win!" if w == "X" else "Computer wins!" if w == "O" else "It's a draw!")
+    choice = input("Type 'sample' for built-in puzzle, or press Enter to type 9 rows: ")
+    rows = SAMPLE if choice.strip() == "sample" else [input("Row: ").strip() for _ in range(9)]
+    grid = [[int(ch) for ch in row] for row in rows]
+    if has_conflict(grid):
+        print("Invalid puzzle: it already breaks Sudoku rules.")
+    elif solve(grid):
+        print("Solved:")
+        for row in grid:
+            print(" ".join(str(n) for n in row))
+    else:
+        print("No solution exists.")
 
 
 main()
@@ -156,50 +148,34 @@ main()
 
 ## 8. Test Cases
 
-Run with `python tictactoe_ai.py`. Type the input values one per line, in the order shown (⏎ means press Enter).
+Run with `python sudoku_solver.py`. Type the input values one per line, in the order shown (⏎ means press Enter).
 
 | No. | Test description | Input (in order) | Expected output | Result |
 |---|---|---|---|---|
-| 1 | Human plays badly (1, 2, 4) | `1 ⏎ 2 ⏎ 4` | `Computer wins!` | Pass |
-| 2 | Human plays well (1, 2, 7, 6, 9) | `1 ⏎ 2 ⏎ 7 ⏎ 6 ⏎ 9` | `It's a draw!` | Pass |
-| 3 | Invalid cell number 0, then a repeated cell | `0 ⏎ 1 ⏎ 1 ⏎ 2 ⏎ 7 ⏎ 6 ⏎ 9` | `Invalid move, try again.` | Pass |
-| 4 | Non-numeric input | `abc ⏎ 1 ⏎ 2 ⏎ 7 ⏎ 6 ⏎ 9` | `Invalid move, try again.` | Pass |
-| 5 | Computer reply shown after human move | `1 ⏎ 2 ⏎ 4` | `Computer played.` | Pass |
+| 1 | Built-in sample puzzle | `sample` | `Solved:`<br>`5 3 4 6 7 8 9 1 2`<br>`3 4 5 2 8 6 1 7 9` | Pass |
+| 2 | Two 5s in the first row | ` ⏎ 550070000 ⏎ 000000000 ⏎ 000000000 ⏎ 000000000 ⏎ 000000000 ⏎ 000000000 ⏎ 000000000 ⏎ 000000000 ⏎ 000000000` | `Invalid puzzle: it already breaks Sudoku rules.` | Pass |
+| 3 | Puzzle with no solution | ` ⏎ 123456780 ⏎ 000000009 ⏎ 000000000 ⏎ 000000000 ⏎ 000000000 ⏎ 000000000 ⏎ 000000000 ⏎ 000000000 ⏎ 000000000` | `No solution exists.` | Pass |
+| 4 | Already solved grid | ` ⏎ 534678912 ⏎ 672195348 ⏎ 198342567 ⏎ 859761423 ⏎ 426853791 ⏎ 713924856 ⏎ 961537284 ⏎ 287419635 ⏎ 345286179` | `Solved:`<br>`5 3 4 6 7 8 9 1 2` | Pass |
 
 ## 9. Sample Output (take your screenshot of this run)
 
-Input typed: `1 ⏎ 2 ⏎ 4`
+Input typed: `sample`
 
 ```text
-You are X, computer is O. Positions are 1-9 (left to right, top to bottom).
-  |   |  
---+---+--
-  |   |  
---+---+--
-  |   |  
-Your move (1-9): Computer played.
-X |   |  
---+---+--
-  | O |  
---+---+--
-  |   |  
-Your move (1-9): Computer played.
-X | X | O
---+---+--
-  | O |  
---+---+--
-  |   |  
-Your move (1-9): Computer played.
-X | X | O
---+---+--
-X | O |  
---+---+--
-O |   |  
-Computer wins!
+Type 'sample' for built-in puzzle, or press Enter to type 9 rows: Solved:
+5 3 4 6 7 8 9 1 2
+6 7 2 1 9 5 3 4 8
+1 9 8 3 4 2 5 6 7
+8 5 9 7 6 1 4 2 3
+4 2 6 8 5 3 7 9 1
+7 1 3 9 2 4 8 5 6
+9 6 1 5 3 7 2 8 4
+2 8 7 4 1 9 6 3 5
+3 4 5 2 8 6 1 7 9
 ```
 
 *Add your own screenshot here:* `![Output screenshot](screenshots/output1.png)`
 
 ## 10. Conclusion
 
-Minimax lets the computer evaluate every possible continuation, so it never loses. Tests show a careless human loses and a careful one can only draw. The program is a good example of recursion with backtracking (place a mark, explore, undo it).
+Backtracking solves the standard puzzle quickly by trying a number, going deeper, and undoing the choice when stuck. Checking for conflicts first prevents wasted work on impossible puzzles. The same technique is used for N-Queens and other constraint problems.
